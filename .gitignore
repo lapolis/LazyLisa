@@ -1,3 +1,8 @@
+# All configs and saved stuff
+*.conf
+*.db
+posts/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
