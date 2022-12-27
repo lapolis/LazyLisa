@@ -1,0 +1,11 @@
+instaloader
+# requests_oauthlib
+requests
+filetype
+tweepy
+python-pinterest
+configparser
+nltk
+sweet
+pytumblr2
+python-pinterest
