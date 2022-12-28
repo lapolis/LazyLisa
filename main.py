@@ -224,6 +224,20 @@ def pin_it(post_content, app_id, app_secret):
 	api = pinterest.Pinterest(token="ApFF9WBrjug_xhJPsETri2jp9pxgFVQfZNayykxFOjJQhWAw")
 	api.me()
 
+	if 'video/mp4' in post_content.values():
+		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
+	else:
+		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+
+	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
+	## 500 characters max!! for Insta!
+	post_arr = split_text(txt_file_path, 495)
+
+	# 5 files limit
+	media_arr = []
+	if len(media_to_upload) > 5:
+		media_to_upload = media_to_upload[:5]
+
 
 def main():
 	# os.system('clear')
@@ -271,6 +285,9 @@ def main():
 			pin = True
 		except Exception as e:
 			logit(f'Pinterest config is broken with error: {e}')
+
+	msg = f'LazyLisa started!\nTumblr: {tumblr}\nTwitter: {tweet}\nPinterest: {pin}'
+	send_msg(msg)
 
 	while True:
 		# if True:
