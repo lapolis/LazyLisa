@@ -220,10 +220,16 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 	media_sources = {}
 	media_count = 0
 	for k, v in post_content.items():
-		if v == 'image/jpeg' or v == 'video/mp4':
+		# videos are not implemented yet
+		# if v == 'image/jpeg' or v == 'video/mp4':
+		if v == 'image/jpeg':
 			media_type = v.split('/')[0]
 			media_identifier = f'{media_type}_{media_count}'
-			content.append({'type': media_type, 'media': [{'type': v, 'identifier': media_identifier}]})
+			media_item = {'type': media_type, 'media': [{'type': v, 'identifier': media_identifier}]}
+			if v == 'video/mp4':
+				content.insert(0, media_item)
+			else:
+				content.append(media_item)
 			media_sources[media_identifier] = k
 			media_count += 1
 			if media_count >= 10:
@@ -231,6 +237,8 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 				break
 
 	content.append({'type': 'text', 'text': text})
+	import IPython; IPython.embed()
+	exit()
 	client.create_post(account_name, content=content, media_sources=media_sources)
 
 	time.sleep(5)
@@ -315,8 +323,6 @@ def main():
 	send_msg(msg)
 
 	while True:
-		# if True:
-		# 	logit('NOT - DEBUG - Got latest post')
 		try:
 			new_post = get_latest_post(post_fold, INSTA_USER, INSTA_PASS, target_profile)
 		except Exception as e:
@@ -325,6 +331,8 @@ def main():
 			send_msg(msg)
 			new_post = False
 
+		# if True:
+			# logit('NOT - DEBUG - Got latest post')
 		if new_post:
 			logit('Got latest post')
 			send_msg('Got latest post, posting soon.')
