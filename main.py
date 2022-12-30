@@ -32,11 +32,30 @@ def logit(msg):
 
 def get_latest_post(path, user, passwd, target_profile):
 	insta = instaloader.Instaloader(sanitize_paths=True,dirname_pattern=path)
-	insta.login(user, passwd)
+	
+	try:
+		insta.login(user, passwd)
+	except Exception as e:
+		msg = f'Insta broke at login -> {e}'
+		logit(msg)
+		send_msg(msg)
+
 	## requesting a password
 	# insta.interactive_login(user)
-	profile = Profile.from_username(insta.context, target_profile)
-	posts = profile.get_posts()
+	try:
+		profile = Profile.from_username(insta.context, target_profile)
+	except Exception as e:
+		msg = f'Insta getting profile broke -> {e}'
+		logit(msg)
+		send_msg(msg)
+
+	try:
+		posts = profile.get_posts()
+	except Exception as e:
+		msg = f'Insta getting post broke -> {e}'
+		logit(msg)
+		send_msg(msg)
+
 	for p in posts:
 		# print(p.title)
 		# print(p.get_is_videos())
@@ -59,10 +78,16 @@ def get_latest_post(path, user, passwd, target_profile):
 						os.remove(file_path)
 				f.seek(0, 0)
 				f.write(p.shortcode)
-				if insta.download_post(p, target=profile):
-					return True
-				else:
-					return False
+
+				try:
+					post_down_bool = insta.download_post(p, target=profile)
+				except Exception as e:
+					msg = f'Insta downloading post failed -> {e}'
+					logit(msg)
+					send_msg(msg)
+					post_down_bool = False
+
+				return post_down_bool
 
 def file_check(path):
 	logit('Checking file types')
@@ -292,7 +317,15 @@ def main():
 	while True:
 		# if True:
 		# 	logit('NOT - DEBUG - Got latest post')
-		if get_latest_post(post_fold, INSTA_USER, INSTA_PASS, target_profile):
+		try:
+			new_post = get_latest_post(post_fold, INSTA_USER, INSTA_PASS, target_profile)
+		except Exception as e:
+			msg = f'Something broke down with Instagram -> {e}'
+			logit(msg)
+			send_msg(msg)
+			new_post = False
+
+		if new_post:
 			logit('Got latest post')
 			send_msg('Got latest post, posting soon.')
 			post_content = file_check(post_fold)
