@@ -221,53 +221,9 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	msg = f'New tweet is up -> https://twitter.com/{screen_name}/status/{tweetid}'
 	logit(msg, 1)
 
-# def tumblr_post_it_with_pytumblr2(post_content, consumer_key, consumer_secret, oauth_token, oauth_secret):
-# 	client = pytumblr2.TumblrRestClient(consumer_key, consumer_secret, oauth_token, oauth_secret)
-# 	account_name = client.info()['user']['name']
-
-# 	# media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4' or v == 'image/jpeg']
-
-# 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
-# 	text = ''
-# 	with open(txt_file_path, 'r') as fr:
-# 		for l in fr.readlines():
-# 			if l.strip() != '.':
-# 				text += l
-
-# 	content = []
-# 	media_sources = {}
-# 	media_count = 0
-# 	for k, v in post_content.items():
-# 		# videos are not implemented yet
-# 		# if v == 'image/jpeg' or v == 'video/mp4':
-# 		if v == 'image/jpeg':
-# 			media_type = v.split('/')[0]
-# 			media_identifier = f'{media_type}_{media_count}'
-# 			media_item = {'type': media_type, 'media': [{'type': v, 'identifier': media_identifier}]}
-# 			if v == 'video/mp4':
-# 				content.insert(0, media_item)
-# 			else:
-# 				content.append(media_item)
-# 			media_sources[media_identifier] = k
-# 			media_count += 1
-# 			if media_count >= 10:
-# 				## media limit per post reached
-# 				break
-
-# 	content.append({'type': 'text', 'text': text})
-# 	client.create_post(account_name, content=content, media_sources=media_sources)
-
-# 	time.sleep(5)
-
-# 	post_id = client.posts(account_name)['posts'][0]['id']
-# 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
-# 	logit(msg, 1)
-
 def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oauth_secret):
 	client = pytumblr.TumblrRestClient(consumer_key, consumer_secret, oauth_token, oauth_secret)
 	account_name = client.info()['user']['name']
-
-	# media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4' or v == 'image/jpeg']
 
 	hashtags_file_path = [k for k, v in post_content.items() if v == 'plain/hashtags'][0]
 	caption_file_path = [k for k, v in post_content.items() if v == 'plain/caption'][0]
@@ -283,8 +239,6 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 		client.create_video(account_name, state='published', tags=tags, format='markdown', data=media_to_upload, caption=caption)
 	else:
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
-		############ post content to contain tags!!!!!
-		# client.create_photo(account_name, state="draft", tags=tags, format='markdown', data=media_to_upload, caption=text)
 		client.create_photo(account_name, state='published', tags=tags, format='markdown', data=media_to_upload, caption=caption)
 
 	time.sleep(5)
@@ -390,7 +344,7 @@ def main():
 
 			if tweet:
 				logit('Tweeting now!')
-				# tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
+				tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
 			if pin:
 				logit('Posting on Pinterest')
 				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID)
