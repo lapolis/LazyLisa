@@ -12,6 +12,9 @@ user = <username to login with>
 # if password not included will be asked
 pass = <password for that user>
 target_profile = <profile to scrape>
+# The script upon login will give priority to session files
+# utility to get the session file from firefox -> https://raw.githubusercontent.com/instaloader/instaloader/master/docs/codesnippets/615_import_firefox_session.py
+# otherwise, from cmd line do `instaloader -l <username>` in order to create the file
  
 ## [Telegram]
 ## TOKEN = 
