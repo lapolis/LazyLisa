@@ -352,13 +352,13 @@ def main():
 
 			if tweet:
 				logit('Tweeting now!')
-				# tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
+				tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
 			if pin:
 				logit('Posting on Pinterest')
 				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID)
 			if tumblr:
 				logit('Posting on Tumblr')
-				# tumblr_post_it(post_content, tumblr_CUSTOMER_KEY, tumblr_CUSTOMER_SECRET, tumblr_OAUTH_TOKEN, tumblr_OAUTH_SECRET)
+				tumblr_post_it(post_content, tumblr_CUSTOMER_KEY, tumblr_CUSTOMER_SECRET, tumblr_OAUTH_TOKEN, tumblr_OAUTH_SECRET)
 
 		else:
 			logit('Noting to do now')
