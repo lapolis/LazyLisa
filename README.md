@@ -6,12 +6,13 @@ File `API_KEYS.conf` layout example:
 <br>
 ```
 ## Uncomment what you need and ad all the keys/tokens
-##
-## [Instagram]
-## user = <username to login with>
-## pass = <password for that user>
-## target_profile = <profile to scrape>
-## 
+
+[Instagram]
+user = <username to login with>
+# if password not included will be asked
+pass = <password for that user>
+target_profile = <profile to scrape>
+ 
 ## [Telegram]
 ## TOKEN = 
 ## CHATID = 
