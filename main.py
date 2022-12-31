@@ -241,7 +241,7 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
 		client.create_photo(account_name, state='published', tags=tags, format='markdown', data=media_to_upload, caption=caption)
 
-	time.sleep(5)
+	time.sleep(10)
 
 	post_id = client.posts(account_name)['posts'][0]['id']
 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
