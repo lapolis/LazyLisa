@@ -6,7 +6,8 @@ import tweepy
 import filetype
 import requests
 import pinterest
-import pytumblr2
+import pytumblr
+# import pytumblr2
 import configparser
 from instaloader import *
 
@@ -91,6 +92,11 @@ def get_latest_post(path, target_profile, insta):
 				f.seek(0, 0)
 				f.write(p.shortcode)
 
+				with open(os.path.join(path, 'hashtags.tags'), 'w+') as file_tags:
+					file_tags.write(' '.join(p.caption_hashtags))
+				with open(os.path.join(path, 'post.caption'), 'w+') as file_caption:
+					file_caption.write(' '.join(filter(lambda x:x[0]!='#', p.caption.split())))
+
 				try:
 					post_down_bool = insta.download_post(p, target=profile)
 				except Exception as e:
@@ -108,6 +114,10 @@ def file_check(path):
 
 		if file_name.endswith('.txt'):
 			post_content[file_path] = 'plain/text'
+		elif file_name.endswith('.tags'):
+			post_content[file_path] = 'plain/hashtags'
+		elif file_name.endswith('.caption'):
+			post_content[file_path] = 'plain/caption'
 		else:
 			type_obj = filetype.guess(file_path)
 			if type_obj is None:
@@ -211,43 +221,71 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	msg = f'New tweet is up -> https://twitter.com/{screen_name}/status/{tweetid}'
 	logit(msg, 1)
 
+# def tumblr_post_it_with_pytumblr2(post_content, consumer_key, consumer_secret, oauth_token, oauth_secret):
+# 	client = pytumblr2.TumblrRestClient(consumer_key, consumer_secret, oauth_token, oauth_secret)
+# 	account_name = client.info()['user']['name']
+
+# 	# media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4' or v == 'image/jpeg']
+
+# 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
+# 	text = ''
+# 	with open(txt_file_path, 'r') as fr:
+# 		for l in fr.readlines():
+# 			if l.strip() != '.':
+# 				text += l
+
+# 	content = []
+# 	media_sources = {}
+# 	media_count = 0
+# 	for k, v in post_content.items():
+# 		# videos are not implemented yet
+# 		# if v == 'image/jpeg' or v == 'video/mp4':
+# 		if v == 'image/jpeg':
+# 			media_type = v.split('/')[0]
+# 			media_identifier = f'{media_type}_{media_count}'
+# 			media_item = {'type': media_type, 'media': [{'type': v, 'identifier': media_identifier}]}
+# 			if v == 'video/mp4':
+# 				content.insert(0, media_item)
+# 			else:
+# 				content.append(media_item)
+# 			media_sources[media_identifier] = k
+# 			media_count += 1
+# 			if media_count >= 10:
+# 				## media limit per post reached
+# 				break
+
+# 	content.append({'type': 'text', 'text': text})
+# 	client.create_post(account_name, content=content, media_sources=media_sources)
+
+# 	time.sleep(5)
+
+# 	post_id = client.posts(account_name)['posts'][0]['id']
+# 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
+# 	logit(msg, 1)
+
 def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oauth_secret):
-	client = pytumblr2.TumblrRestClient(consumer_key, consumer_secret, oauth_token, oauth_secret)
+	client = pytumblr.TumblrRestClient(consumer_key, consumer_secret, oauth_token, oauth_secret)
 	account_name = client.info()['user']['name']
 
 	# media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4' or v == 'image/jpeg']
 
-	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
-	text = ''
-	with open(txt_file_path, 'r') as fr:
-		for l in fr.readlines():
-			if l.strip() != '.':
-				text += l
+	hashtags_file_path = [k for k, v in post_content.items() if v == 'plain/hashtags'][0]
+	caption_file_path = [k for k, v in post_content.items() if v == 'plain/caption'][0]
 
-	content = []
-	media_sources = {}
-	media_count = 0
-	for k, v in post_content.items():
-		# videos are not implemented yet
-		# if v == 'image/jpeg' or v == 'video/mp4':
-		if v == 'image/jpeg':
-			media_type = v.split('/')[0]
-			media_identifier = f'{media_type}_{media_count}'
-			media_item = {'type': media_type, 'media': [{'type': v, 'identifier': media_identifier}]}
-			if v == 'video/mp4':
-				content.insert(0, media_item)
-			else:
-				content.append(media_item)
-			media_sources[media_identifier] = k
-			media_count += 1
-			if media_count >= 10:
-				## media limit per post reached
-				break
+	with open(hashtags_file_path, 'r') as fr:
+		tags = fr.read().split(' ')
 
-	content.append({'type': 'text', 'text': text})
-	import IPython; IPython.embed()
-	exit()
-	client.create_post(account_name, content=content, media_sources=media_sources)
+	# assuming that it is always only one block (using the function just to clean that up)
+	caption = split_text(caption_file_path, 4000)[0]
+
+	if 'video/mp4' in post_content.values():
+		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4'][0]
+		client.create_video(account_name, state='published', tags=tags, format='markdown', data=media_to_upload, caption=caption)
+	else:
+		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+		############ post content to contain tags!!!!!
+		# client.create_photo(account_name, state="draft", tags=tags, format='markdown', data=media_to_upload, caption=text)
+		client.create_photo(account_name, state='published', tags=tags, format='markdown', data=media_to_upload, caption=caption)
 
 	time.sleep(5)
 
@@ -270,7 +308,7 @@ def pin_it(post_content, app_id, app_secret):
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
 
 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
-	## 500 characters max!! for Insta!
+	## 500 characters max!! for Pinterest!
 	post_arr = split_text(txt_file_path, 495)
 
 	# 5 files limit
@@ -343,16 +381,16 @@ def main():
 			msg = f'Something broke down with Instagram -> {e}'
 			logit(msg, 1)
 			new_post = False
-
+		
 		# if True:
-			# logit('NOT - DEBUG - Got latest post')
+		# 	logit('NOT - DEBUG - Got latest post')
 		if new_post:
 			logit('Got latest post, posting soon.', 1)
 			post_content = file_check(post_fold)
 
 			if tweet:
 				logit('Tweeting now!')
-				tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
+				# tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
 			if pin:
 				logit('Posting on Pinterest')
 				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID)
