@@ -1,5 +1,5 @@
 instaloader
-# requests_oauthlib
+requests_oauthlib
 requests
 filetype
 tweepy
@@ -9,4 +9,6 @@ nltk
 sweet
 # pytumblr2
 pytumblr
-python-pinterest
+# python-pinterest
+py3-pinterest
+urllib3

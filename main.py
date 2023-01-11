@@ -5,11 +5,15 @@ import time
 import tweepy
 import filetype
 import requests
-import pinterest
 import pytumblr
+# import pinterest
+# import py3pin
 # import pytumblr2
 import configparser
+# import googleapiclient
 from instaloader import *
+from requests_oauthlib import OAuth2Session
+from urllib3 import encode_multipart_formdata
 
 # import IPython; IPython.embed()
 # exit()
@@ -210,15 +214,14 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 		return 1
 
 	time.sleep(5)
+	tweetid = ret.id
+	screen_name = ret.user.screen_name
 	if len(post_arr) != 1:
-		latest_post = api.user_timeline()[0]
-		tweetid = latest_post.id
-		screen_name = latest_post.user.screen_name
 		for status in post_arr[1:]:
-			api.update_status(status=status, in_reply_to_status_id=tweetid)
+			tweetid = api.update_status(status=status, in_reply_to_status_id=tweetid).id
 			time.sleep(5)
 
-	msg = f'New tweet is up -> https://twitter.com/{screen_name}/status/{tweetid}'
+	msg = f'New tweet is up -> https://twitter.com/{screen_name}/status/{ret.id}'
 	logit(msg, 1)
 
 def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oauth_secret):
@@ -247,19 +250,57 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
 	logit(msg, 1)
 
-def pin_it(post_content, app_id, app_secret):
+def pin_it(post_content, app_id, app_secret, board_id, token, redirect_url, interests_arr):
+	# post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS
 	# 500 chars limit
 	# 5 files limit
 	# https://developers.pinterest.com/docs/content/content-creation/
+	url = 'https://api.pinterest.com/'
+	url_init = 'https://www.pinterest.com/oauth'
+	url_token = f'{url}/v5/oauth/token'
+	url_media_upload_init = f'{url}/v5/media'
+	url_media_upload = f'{url}'
+	url_pin = f'{url}'
+
+	# s = requests.Session()
+	scope = 'boards:read,boards:read_secret,pins:read,pins:read_secret,pins:write,pins:write_secret'
+	scope = 'boards:read,boards:read_secret,pins:read,pins:read_secret,pins:write_secret'
+	oauth = OAuth2Session(app_id, redirect_uri=redirect_url, scope=scope)
+	authorization_url, state = oauth.authorization_url(url_init)
+	print(f'Please go to {authorization_url} and authorize access.')
+	authorization_response = input('Enter the full callback URL ')
+	try:
+		token = oauth.fetch_token(url_token, authorization_response=authorization_response,client_secret=app_secret, verify=False)
+	except Exception as e:
+		if 'Scope has changed from' not in str(e):
+			msg = f'Pinterest oauth error -> {e}'
+			logit(msg)
+
+	import IPython; IPython.embed()
+	exit()
+
+	# from here on it is not testes since I keep getting a 401 because I do not have permission to upload videos.
+	# thanks for your time.
+
+	if 'video/mp4' in post_content.values():
+		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
+		media_type = 'video'
+		data={'media_type': 'video'}
+		oauth.post(url_media_upload_init, data=data)
+	else:
+		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+		media_type = 'image'
+
+
+	oauth.get()
+	oauth.post()
+
+
 	p = Api(app_id=app_id, app_secret=app_secret)
 	link = pinterest.oauth2.authorization_url(app_id, redirect_uri)
 	api = pinterest.Pinterest(token="ApFF9WBrjug_xhJPsETri2jp9pxgFVQfZNayykxFOjJQhWAw")
 	api.me()
 
-	if 'video/mp4' in post_content.values():
-		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
-	else:
-		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
 
 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
 	## 500 characters max!! for Pinterest!
@@ -316,7 +357,9 @@ def main():
 			pin_BOARD_ID = config['Pinterest']['BOARDID']
 			pin_APP_ID = config['Pinterest']['APPID']
 			pin_APP_SECRET = config['Pinterest']['APPSECRET']
-			pin_REFRESHTOKEN = config['Pinterest']['REFRESHTOKEN']
+			pin_APP_TOKEN = config['Pinterest']['ACCESSTOKEN']
+			pin_REDIRECT = config['Pinterest']['FOLLOWLINK']
+			pin_INTERESTS = config['Pinterest']['INTERESTS'].split(',')
 			pin = True
 		except Exception as e:
 			logit(f'Pinterest config is broken with error: {e}')
@@ -337,7 +380,7 @@ def main():
 			new_post = False
 		
 		# if True:
-		# 	logit('NOT - DEBUG - Got latest post')
+			# logit('NOT - DEBUG - Got latest post')
 		if new_post:
 			logit('Got latest post, posting soon.', 1)
 			post_content = file_check(post_fold)
@@ -347,7 +390,7 @@ def main():
 				tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
 			if pin:
 				logit('Posting on Pinterest')
-				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID)
+				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS)
 			if tumblr:
 				logit('Posting on Tumblr')
 				tumblr_post_it(post_content, tumblr_CUSTOMER_KEY, tumblr_CUSTOMER_SECRET, tumblr_OAUTH_TOKEN, tumblr_OAUTH_SECRET)
