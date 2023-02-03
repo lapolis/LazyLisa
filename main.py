@@ -294,7 +294,7 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
 	board_lp = f'//div[@title="{board_name}"]'
 	title = '//textarea[@placeholder="Pin title"]'
-	description = '//div[@class="public-DraftEditorPlaceholder-inner"]'
+	description = '//div[starts-with(@class, "public-DraftStyleDefault")]'
 	destination_link = '//textarea[@placeholder="www.website.com"]'
 	upload_media = '//input[@aria-label="File upload"]'
 	alt_text = '//div[contains(text(), "Add alt text")]'
@@ -314,7 +314,7 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	driver.find_element('xpath', board_lp).click()
 	driver.find_element('xpath', title).send_keys(f'Got a new post waiting for you on my Insta!')
 
-	description_elem = driver.find_element('xpath', '//div[starts-with(@class, "public-DraftStyleDefault")]')
+	description_elem = driver.find_element('xpath', description)
 	driver.execute_script(
 	f'''
 	const text = `{caption}`;
