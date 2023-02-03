@@ -12,3 +12,6 @@ pytumblr
 # python-pinterest
 py3-pinterest
 urllib3
+selenium
+# chromedriver-autoinstaller
+# sudo apt-get install chromium-chromedriver

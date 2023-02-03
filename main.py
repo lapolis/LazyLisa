@@ -6,17 +6,19 @@ import tweepy
 import filetype
 import requests
 import pytumblr
-# import pinterest
-# import py3pin
-# import pytumblr2
 import configparser
-# import googleapiclient
 from instaloader import *
-from requests_oauthlib import OAuth2Session
-from urllib3 import encode_multipart_formdata
 
-# import IPython; IPython.embed()
-# exit()
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options 
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# import IPython; IPython.embed(); exit()
+
+# import chromedriver_autoinstaller
+# chromedriver_autoinstaller.install()
 
 config = configparser.ConfigParser()
 config.read( os.getcwd() + '/API_KEYS.conf' )
@@ -99,7 +101,7 @@ def get_latest_post(path, target_profile, insta):
 				with open(os.path.join(path, 'hashtags.tags'), 'w+') as file_tags:
 					file_tags.write(' '.join(p.caption_hashtags))
 				with open(os.path.join(path, 'post.caption'), 'w+') as file_caption:
-					file_caption.write(' '.join(filter(lambda x:x[0]!='#', p.caption.split())))
+					file_caption.write('\n\n'.join(filter(lambda x:x[0]!='#', p.caption.split('\n\n'))))
 
 				try:
 					post_down_bool = insta.download_post(p, target=profile)
@@ -122,6 +124,8 @@ def file_check(path):
 			post_content[file_path] = 'plain/hashtags'
 		elif file_name.endswith('.caption'):
 			post_content[file_path] = 'plain/caption'
+		elif file_name.endswith('.post'):
+			post_content[file_path] = 'plain/code'
 		else:
 			type_obj = filetype.guess(file_path)
 			if type_obj is None:
@@ -149,7 +153,7 @@ def split_text(file, max_chars):
 	thread_ = ''
 	max_chars -= 4
 	for line in thread.split('\n\n'):
-		line = line.replace('\n', ' ')
+		# line = line.replace('\n', ' ')
 		line = line.replace('  ', ' ')
 		thread_ += line + '\n\n'
 	thread = thread_
@@ -250,67 +254,94 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
 	logit(msg, 1)
 
-def pin_it(post_content, app_id, app_secret, board_id, token, redirect_url, interests_arr):
+def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	# post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS
 	# 500 chars limit
 	# 5 files limit
-	# https://developers.pinterest.com/docs/content/content-creation/
-	url = 'https://api.pinterest.com/'
-	url_init = 'https://www.pinterest.com/oauth'
-	url_token = f'{url}/v5/oauth/token'
-	url_media_upload_init = f'{url}/v5/media'
-	url_media_upload = f'{url}'
-	url_pin = f'{url}'
+	
+	hashtags_file_path = [k for k, v in post_content.items() if v == 'plain/hashtags'][0]
+	caption_file_path = [k for k, v in post_content.items() if v == 'plain/caption'][0]
+	code_file_path = [k for k, v in post_content.items() if v == 'plain/code'][0]
 
-	# s = requests.Session()
-	scope = 'boards:read,boards:read_secret,pins:read,pins:read_secret,pins:write,pins:write_secret'
-	scope = 'boards:read,boards:read_secret,pins:read,pins:read_secret,pins:write_secret'
-	oauth = OAuth2Session(app_id, redirect_uri=redirect_url, scope=scope)
-	authorization_url, state = oauth.authorization_url(url_init)
-	print(f'Please go to {authorization_url} and authorize access.')
-	authorization_response = input('Enter the full callback URL ')
-	try:
-		token = oauth.fetch_token(url_token, authorization_response=authorization_response,client_secret=app_secret, verify=False)
-	except Exception as e:
-		if 'Scope has changed from' not in str(e):
-			msg = f'Pinterest oauth error -> {e}'
-			logit(msg)
+	with open(hashtags_file_path, 'r') as fr:
+		tags = fr.read().split(' ')
 
-	import IPython; IPython.embed()
-	exit()
+	with open(code_file_path, 'r') as fr:
+		code = fr.read().strip()
+	insta_post_url = f'https://www.instagram.com/p/{code}'
 
-	# from here on it is not testes since I keep getting a 401 because I do not have permission to upload videos.
-	# thanks for your time.
+	# They can read the remaining test in insta
+	post_ending = f'\n\nCheck the full post on Insta!'
+	caption = split_text(caption_file_path, 499 - len(post_ending))[0]
+	caption = caption.replace(' (1/2)', post_ending)
 
 	if 'video/mp4' in post_content.values():
 		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
-		media_type = 'video'
-		data={'media_type': 'video'}
-		oauth.post(url_media_upload_init, data=data)
 	else:
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
-		media_type = 'image'
 
+	if len(media_to_upload) > 4:
+		media_to_upload = media_to_upload[:4]
 
-	oauth.get()
-	oauth.post()
+	chrome_options = Options()
+	chrome_options.add_argument("--headless")
+	chrome_options.add_argument("--window-size=1920,1080")
+	driver = webdriver.Chrome(options=chrome_options)
+	driver.implicitly_wait(15)
 
+	pinterest_home = "https://www.pinterest.com/"
+	pin_builder = "https://www.pinterest.com/pin-builder/"
+	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
+	board_lp = f'//div[@title="{board_name}"]'
+	title = '//textarea[@placeholder="Pin title"]'
+	description = '//div[@class="public-DraftEditorPlaceholder-inner"]'
+	destination_link = '//textarea[@placeholder="www.website.com"]'
+	upload_media = '//input[@aria-label="File upload"]'
+	alt_text = '//div[contains(text(), "Add alt text")]'
+	alt_text_write = '//textarea[@placeholder="Explain what people can see in the Pin"]'
+	publish = '//div[contains(text(), "Publish")]'
+	post_done_message = '//h1[contains(text(), "You created a Pin!")]'
+	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
+	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
 
-	p = Api(app_id=app_id, app_secret=app_secret)
-	link = pinterest.oauth2.authorization_url(app_id, redirect_uri)
-	api = pinterest.Pinterest(token="ApFF9WBrjug_xhJPsETri2jp9pxgFVQfZNayykxFOjJQhWAw")
-	api.me()
+	driver.get(pinterest_home)
+	driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
+	driver.get(pin_builder)
 
+	# wait and select the board to publish to
+	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
+	driver.find_element('xpath', drop_down_menu).click()
+	driver.find_element('xpath', board_lp).click()
+	driver.find_element('xpath', title).send_keys(f'Got a new post waiting for you on my Insta!')
 
-	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
-	## 500 characters max!! for Pinterest!
-	post_arr = split_text(txt_file_path, 495)
+	description_elem = driver.find_element('xpath', '//div[starts-with(@class, "public-DraftStyleDefault")]')
+	driver.execute_script(
+	f'''
+	const text = `{caption}`;
+	const dataTransfer = new DataTransfer();
+	dataTransfer.setData('text', text);
+	const event = new ClipboardEvent('paste', {{
+	clipboardData: dataTransfer,
+	bubbles: true
+	}});
+	arguments[0].dispatchEvent(event)
+	''',
+	description_elem)
 
-	# 5 files limit
-	media_arr = []
-	if len(media_to_upload) > 5:
-		media_to_upload = media_to_upload[:5]
+	driver.find_element('xpath', destination_link).send_keys(insta_post_url)
+	driver.find_element('xpath', upload_media).send_keys(media_to_upload[0])
+	driver.find_element('xpath', alt_text).click()
+	driver.find_element('xpath', alt_text_write).send_keys(f'Latest picture from my Instagram. Go check it out on my {target_profile} page!')
+	driver.find_element('xpath', publish).click()
 
+	# just give it a bit of extra time
+	_ = WebDriverWait(driver, 60 ).until(EC.presence_of_element_located((By.XPATH, post_done_message)))
+	pin_url = driver.find_element('xpath', link_to_pin).get_attribute('href')
+
+	driver.close()
+
+	msg = f'Pinterest pin done -> {pin_url}'
+	logit(msg, 1)
 
 def main():
 	# os.system('clear')
@@ -354,12 +385,8 @@ def main():
 
 	if 'Pinterest' in config:
 		try:
-			pin_BOARD_ID = config['Pinterest']['BOARDID']
-			pin_APP_ID = config['Pinterest']['APPID']
-			pin_APP_SECRET = config['Pinterest']['APPSECRET']
-			pin_APP_TOKEN = config['Pinterest']['ACCESSTOKEN']
-			pin_REDIRECT = config['Pinterest']['FOLLOWLINK']
-			pin_INTERESTS = config['Pinterest']['INTERESTS'].split(',')
+			pinterest_SESSION = config['Pinterest']['SESSION']
+			pinterest_BOARD = config['Pinterest']['BOARD']
 			pin = True
 		except Exception as e:
 			logit(f'Pinterest config is broken with error: {e}')
@@ -380,20 +407,33 @@ def main():
 			new_post = False
 		
 		# if True:
-			# logit('NOT - DEBUG - Got latest post')
+		# 	logit('NOT - DEBUG - Got latest post')
+
 		if new_post:
 			logit('Got latest post, posting soon.', 1)
 			post_content = file_check(post_fold)
 
 			if tweet:
 				logit('Tweeting now!')
-				tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
+				try:
+					tweet_it(post_content, twitter_API, twitter_API_SECRET, twitter_TOKEN, twitter_TOKEN_SECRET)
+				except Exception as e:
+					msg = f'Not able to Tweet -> {e}'
+					logit(msg, 1)
 			if pin:
 				logit('Posting on Pinterest')
-				# pin_it(post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS)
+				try:
+					pin_it(post_content, pinterest_SESSION, pinterest_BOARD, target_profile)
+				except Exception as e:
+					msg = f'Not able to Pin it -> {e}'
+					logit(msg, 1)
 			if tumblr:
 				logit('Posting on Tumblr')
-				tumblr_post_it(post_content, tumblr_CUSTOMER_KEY, tumblr_CUSTOMER_SECRET, tumblr_OAUTH_TOKEN, tumblr_OAUTH_SECRET)
+				try:
+					tumblr_post_it(post_content, tumblr_CUSTOMER_KEY, tumblr_CUSTOMER_SECRET, tumblr_OAUTH_TOKEN, tumblr_OAUTH_SECRET)
+				except Exception as e:
+					msg = f'Not able to Tumblr it -> {e}'
+					logit(msg, 1)
 
 		else:
 			logit('Noting to do now')
