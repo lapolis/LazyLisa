@@ -22,9 +22,10 @@ target_profile = <profile to scrape>
 ## CHATID = 
 ## 
 ## [Pinterest]
-## APPID = 
-## APPSECRET = 
-## REFRESHTOKEN = 
+## # This is your _pinterest_sess cookie straight outta ya browser
+## SESSION = 
+## # This is the name (in palintext) of the board you want to post to
+## BOARD = 
 ## 
 ## [Tumblr]
 ## ## https://api.tumblr.com/console/calls/user/info
@@ -41,50 +42,3 @@ target_profile = <profile to scrape>
 ## BEARERTOKEN = 
 ```
 <br>
-
-Use the following to extract Pinterest cookies.
-
-```py
-from glob import glob
-from os.path import expanduser
-from platform import system
-from sqlite3 import OperationalError, connect
-
-try:
-    from instaloader import ConnectionException, Instaloader
-except ModuleNotFoundError:
-    raise SystemExit("Instaloader not found.\n  pip install [--user] instaloader")
-
-
-def get_cookiefile():
-    default_cookiefile = {
-        "Windows": "~/AppData/Roaming/Mozilla/Firefox/Profiles/*/cookies.sqlite",
-        "Darwin": "~/Library/Application Support/Firefox/Profiles/*/cookies.sqlite",
-    }.get(system(), "~/.mozilla/firefox/*/cookies.sqlite")
-    cookiefiles = glob(expanduser(default_cookiefile))
-    if not cookiefiles:
-        raise SystemExit("No Firefox cookies.sqlite file found. Use -c COOKIEFILE.")
-    return cookiefiles[0]
-
-
-def import_session(cookiefile, sessionfile):
-    print("Using cookies from {}.".format(cookiefile))
-    conn = connect(f"file:{cookiefile}?immutable=1", uri=True)
-    try:
-        cookie_data = conn.execute(
-            "SELECT name, value FROM moz_cookies WHERE baseDomain='pinterest.co.uk'"
-        )
-    except OperationalError:
-        cookie_data = conn.execute(
-            "SELECT name, value FROM moz_cookies WHERE host LIKE '%pinterest.co.uk'"
-        )
-    with open('/tmp/pin_cookies', 'w+') as cw:
-        for cc in cookie_data.fetchall():
-            cw.write(f'{cc[0]} = {cc[1]}\n')
-
-if __name__ == "__main__":
-    try:
-        import_session(args.cookiefile or get_cookiefile(), args.sessionfile)
-    except (ConnectionException, OperationalError) as e:
-        raise SystemExit("Cookie import failed: {}".format(e))
-```
