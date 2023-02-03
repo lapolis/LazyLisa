@@ -98,10 +98,13 @@ def get_latest_post(path, target_profile, insta):
 				f.seek(0, 0)
 				f.write(p.shortcode)
 
+				import IPython; IPython.embed(); exit()
+
 				with open(os.path.join(path, 'hashtags.tags'), 'w+') as file_tags:
 					file_tags.write(' '.join(p.caption_hashtags))
 				with open(os.path.join(path, 'post.caption'), 'w+') as file_caption:
-					file_caption.write('\n\n'.join(filter(lambda x:x[0]!='#', p.caption.split('\n\n'))))
+					for par in p.caption.split('\n\n'):
+						file_caption.write('\n'.join(filter(lambda x:x[0]!='#' and x[0]!='.', par.split('\n'))) + '\n\n')
 
 				try:
 					post_down_bool = insta.download_post(p, target=profile)
