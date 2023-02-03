@@ -98,8 +98,6 @@ def get_latest_post(path, target_profile, insta):
 				f.seek(0, 0)
 				f.write(p.shortcode)
 
-				import IPython; IPython.embed(); exit()
-
 				with open(os.path.join(path, 'hashtags.tags'), 'w+') as file_tags:
 					file_tags.write(' '.join(p.caption_hashtags))
 				with open(os.path.join(path, 'post.caption'), 'w+') as file_caption:
@@ -190,7 +188,7 @@ def split_text(file, max_chars):
 
 def tweet_it(post_content, api_key, api_secret, access_token, access_token_secret):
 	auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token=access_token, access_token_secret=access_token_secret)
-	api = tweepy.API(auth)
+	api = tweepy.API(auth, timeout=120, retry_count=3, retry_delay=30, retry_errors=[400,404,429,500])
 
 	## up to 4 photos or 1 animated GIF or 1 video in a Tweet.
 	## assuming the account owner either posts a carousel or a single video
