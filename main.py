@@ -82,8 +82,10 @@ def get_latest_post(path, target_profile, insta):
 		# print(p.caption)
 		# print(p.is_video)
 		# print(p.video_url)
-
 		# print(p.shortcode)
+		if p.is_pinned:
+			continue
+
 		latedt_post_path = os.path.join(path, 'latest.post')
 		perm = 'r+' if os.path.isfile(latedt_post_path) else 'w+'
 		with open(latedt_post_path, perm) as f:
@@ -194,8 +196,10 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	## assuming the account owner either posts a carousel or a single video
 	if 'video/mp4' in post_content.values():
 		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
+		async_finalize = True
 	else:
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+		async_finalize = False
 
 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
 	## 280 characters max!! for Insta!
@@ -206,9 +210,12 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	if len(media_to_upload) > 4:
 		media_to_upload = media_to_upload[:4]
 
+	# import IPython; IPython.embed(); exit()
+	# manually upload a video
+
 	for file_path in media_to_upload:
 		# https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/entities#media
-		media_arr.append(api.chunked_upload(file_path.split('/')[-1], file=open(file_path, 'rb'), file_type=post_content[file_path], wait_for_async_finalize=True))
+		media_arr.append(api.chunked_upload(file_path.split('/')[-1], file=open(file_path, 'rb'), file_type=post_content[file_path], wait_for_async_finalize=async_finalize))
 	media_ids = [i.media_id_string for i in media_arr]
 
 	try:
