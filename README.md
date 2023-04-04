@@ -1,6 +1,6 @@
 # LazyLisa
 
-Auto Post everything she publishes on Instagram because she is not bothered to do it.
+Auto Post on "all" social media everything published on Instagram, because she is not bothered to do it.
 
 The following config file assume you created the session file for instaloader. If you didn't, you have two ways to do that:
 - get it from your current browser -> https://raw.githubusercontent.com/instaloader/instaloader/master/docs/codesnippets/615_import_firefox_session.py
