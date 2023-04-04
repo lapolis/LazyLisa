@@ -34,6 +34,16 @@ def send_msg(msg):
 		method  = 'sendMessage'
 		requests.post( url=f'https://api.telegram.org/bot{telegram_token}/{method}', data={'chat_id': telegram_chat_id, 'text': msg} ).json()
 
+def check_status():
+	msg = 'start'
+	if telegram_token and telegram_chat_id:
+		r = requests.get( url=f'https://api.telegram.org/bot{telegram_token}/getUpdates?offset=-1' ).json()
+		try:
+			msg = r['result'][0]['message']['text']
+		except Exception as e:
+			msg = 'stop'
+	return msg
+
 def logit(msg, send=0):
 	print(f'{time.strftime("%Y/%m/%d-%H:%M:%S")} - {msg}')
 	if send:
@@ -407,6 +417,24 @@ def main():
 	send_msg(msg)
 
 	while True:
+		status = check_status()
+		print(status)
+
+		if status == 'stop':
+			msg = f'EXITING LazyLisa'
+			time.sleep(60*30)
+			exit()
+		elif status == 'pause':
+			msg = f'LazyLisa paused!'
+			logit(msg, 1)
+			time.sleep(60*30)
+			continue
+		elif status != 'start':
+			msg = f'LazyLisa weird status -> {status}'
+			logit(msg, 1)
+			time.sleep(60*30)
+			continue
+
 		try:
 			new_post = get_latest_post(post_fold, target_profile, insta)
 		except Exception as e:
