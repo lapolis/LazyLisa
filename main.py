@@ -416,13 +416,11 @@ def main():
 	msg = f'LazyLisa started!\nTumblr: {tumblr}\nTwitter: {tweet}\nPinterest: {pin}'
 	send_msg(msg)
 
+	status = 'start'
 	while True:
-		status = check_status()
-		print(status)
 
 		if status == 'stop':
 			msg = f'EXITING LazyLisa'
-			time.sleep(60*30)
 			exit()
 		elif status == 'pause':
 			msg = f'LazyLisa paused!'
@@ -475,6 +473,8 @@ def main():
 			logit('Noting to do now')
 
 		time.sleep(60*30)
+		status = check_status()
+		print(status)
 
 
 
