@@ -38,11 +38,20 @@ def check_status():
 	msg = 'start'
 	if telegram_token and telegram_chat_id:
 		r = requests.get( url=f'https://api.telegram.org/bot{telegram_token}/getUpdates?offset=-1' ).json()
+
+		# import IPython; IPython.embed(); exit()
+
 		try:
 			msg = r['result'][0]['message']['text']
+			chat = r['result'][0]['message']['chat']['id']
 		except Exception as e:
 			msg = 'stop'
-	return msg
+			chat = 0000
+
+	if chat == telegram_chat_id:
+		return msg
+	else:
+		return 'start'
 
 def logit(msg, send=0):
 	print(f'{time.strftime("%Y/%m/%d-%H:%M:%S")} - {msg}')
@@ -207,9 +216,11 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	if 'video/mp4' in post_content.values():
 		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
 		async_finalize = True
+		media_category = 'amplify_video'
 	else:
 		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
 		async_finalize = False
+		media_category = 'tweet_image'
 
 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
 	## 280 characters max!! for Insta!
@@ -220,12 +231,9 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 	if len(media_to_upload) > 4:
 		media_to_upload = media_to_upload[:4]
 
-	# import IPython; IPython.embed(); exit()
-	# manually upload a video
-
 	for file_path in media_to_upload:
 		# https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/entities#media
-		media_arr.append(api.chunked_upload(file_path.split('/')[-1], file=open(file_path, 'rb'), file_type=post_content[file_path], wait_for_async_finalize=async_finalize))
+		media_arr.append(api.chunked_upload(file_path.split('/')[-1], file=open(file_path, 'rb'), file_type=post_content[file_path], wait_for_async_finalize=async_finalize, media_category=media_category))
 	media_ids = [i.media_id_string for i in media_arr]
 
 	try:
@@ -416,7 +424,9 @@ def main():
 	msg = f'LazyLisa started!\nTumblr: {tumblr}\nTwitter: {tweet}\nPinterest: {pin}'
 	send_msg(msg)
 
+	## DEBUG
 	status = 'start'
+
 	while True:
 
 		if status == 'stop':
@@ -474,9 +484,6 @@ def main():
 
 		time.sleep(60*30)
 		status = check_status()
-		print(status)
-
-
 
 if __name__ == '__main__' :
 	main()
