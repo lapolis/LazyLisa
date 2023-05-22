@@ -45,7 +45,6 @@ def check_status():
 			msg = r['result'][0]['message']['text']
 			chat = r['result'][0]['message']['chat']['id']
 		except Exception as e:
-			msg = 'stop'
 			chat = 0000
 
 	if chat == telegram_chat_id:
@@ -290,7 +289,8 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	code_file_path = [k for k, v in post_content.items() if v == 'plain/code'][0]
 
 	with open(hashtags_file_path, 'r') as fr:
-		tags = fr.read().split(' ')
+		# tags_arr = fr.read().split(' ')
+		tags = fr.read()
 
 	with open(code_file_path, 'r') as fr:
 		code = fr.read().strip()
@@ -310,7 +310,8 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 		media_to_upload = media_to_upload[:4]
 
 	chrome_options = Options()
-	chrome_options.add_argument("--headless")
+	# DEBUG
+	# chrome_options.add_argument("--headless")
 	chrome_options.add_argument("--window-size=1920,1080")
 	driver = webdriver.Chrome(options=chrome_options)
 	driver.implicitly_wait(15)
@@ -319,9 +320,10 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	pin_builder = "https://www.pinterest.com/pin-builder/"
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
 	board_lp = f'//div[@title="{board_name}"]'
-	title = '//textarea[@placeholder="Pin title"]'
+	title = '//textarea[contains(@placeholder, "title")]'
 	description = '//div[starts-with(@class, "public-DraftStyleDefault")]'
-	destination_link = '//textarea[@placeholder="www.website.com"]'
+	destination_link = '//textarea[contains(@placeholder, "destination")]'
+	# tags_path = '//input[contains(@placeholder, "tags")]'
 	upload_media = '//input[@aria-label="File upload"]'
 	alt_text = '//div[contains(text(), "Add alt text")]'
 	alt_text_write = '//textarea[@placeholder="Explain what people can see in the Pin"]'
@@ -329,6 +331,9 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	post_done_message = '//h1[contains(text(), "You created a Pin!")]'
 	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
 	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
+
+	import IPython; IPython.embed(); exit()
+
 
 	driver.get(pinterest_home)
 	driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
@@ -341,6 +346,7 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	driver.find_element('xpath', title).send_keys(f'Got a new post waiting for you on my Insta!')
 
 	description_elem = driver.find_element('xpath', description)
+	# To keep emoji and stuff
 	driver.execute_script(
 	f'''
 	const text = `{caption}`;
@@ -357,8 +363,10 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	driver.find_element('xpath', destination_link).send_keys(insta_post_url)
 	driver.find_element('xpath', upload_media).send_keys(media_to_upload[0])
 	driver.find_element('xpath', alt_text).click()
-	driver.find_element('xpath', alt_text_write).send_keys(f'Latest picture from my Instagram. Go check it out on my {target_profile} page!')
+	driver.find_element('xpath', alt_text_write).send_keys(f'Latest post from my Instagram. Go check it out on my {target_profile} page!')
+	# driver.find_element('xpath', tags_path).send_keys(tags)
 	driver.find_element('xpath', publish).click()
+
 
 	# just give it a bit of extra time
 	_ = WebDriverWait(driver, 60 ).until(EC.presence_of_element_located((By.XPATH, post_done_message)))
@@ -396,6 +404,8 @@ def main():
 			twitter_TOKEN = config['Twitter']['ACCESSTOKEN']
 			twitter_TOKEN_SECRET = config['Twitter']['ACCESSSECRET']
 			tweet = True
+			## DEBUG
+			tweet = False
 		except Exception as e:
 			logit(f'Twitter config is broken with error: {e}')
 
@@ -406,6 +416,8 @@ def main():
 			tumblr_OAUTH_TOKEN = config['Tumblr']['OAUTHTOKEN']
 			tumblr_OAUTH_SECRET = config['Tumblr']['OAUTHSECRET']
 			tumblr = True
+			## DEBUG
+			tumblr = False
 		except Exception as e:
 			logit(f'Tumblr config is broken with error: {e}')
 
@@ -482,8 +494,10 @@ def main():
 		else:
 			logit('Noting to do now')
 
-		time.sleep(60*30)
+		# time.sleep(60*30)
+		time.sleep(5)
 		status = check_status()
+		print(f'Status -> {status}')
 
 if __name__ == '__main__' :
 	main()
