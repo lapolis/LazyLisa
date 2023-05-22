@@ -310,8 +310,7 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 		media_to_upload = media_to_upload[:4]
 
 	chrome_options = Options()
-	# DEBUG
-	# chrome_options.add_argument("--headless")
+	chrome_options.add_argument("--headless")
 	chrome_options.add_argument("--window-size=1920,1080")
 	driver = webdriver.Chrome(options=chrome_options)
 	driver.implicitly_wait(15)
@@ -405,7 +404,7 @@ def main():
 			twitter_TOKEN_SECRET = config['Twitter']['ACCESSSECRET']
 			tweet = True
 			## DEBUG
-			tweet = False
+			# tweet = False
 		except Exception as e:
 			logit(f'Twitter config is broken with error: {e}')
 
@@ -417,7 +416,7 @@ def main():
 			tumblr_OAUTH_SECRET = config['Tumblr']['OAUTHSECRET']
 			tumblr = True
 			## DEBUG
-			tumblr = False
+			# tumblr = False
 		except Exception as e:
 			logit(f'Tumblr config is broken with error: {e}')
 
@@ -426,6 +425,8 @@ def main():
 			pinterest_SESSION = config['Pinterest']['SESSION']
 			pinterest_BOARD = config['Pinterest']['BOARD']
 			pin = True
+			## DEBUG
+			# pin = False
 		except Exception as e:
 			logit(f'Pinterest config is broken with error: {e}')
 
@@ -494,10 +495,10 @@ def main():
 		else:
 			logit('Noting to do now')
 
-		# time.sleep(60*30)
-		time.sleep(5)
+		time.sleep(60*30)
+		# time.sleep(5)
 		status = check_status()
-		print(f'Status -> {status}')
+		# print(f'Status -> {status}')
 
 if __name__ == '__main__' :
 	main()
