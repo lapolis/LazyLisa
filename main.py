@@ -3,6 +3,7 @@
 import os
 import time
 import tweepy
+import argparse
 import filetype
 import requests
 import pytumblr
@@ -22,6 +23,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 config = configparser.ConfigParser()
 config.read( os.getcwd() + '/API_KEYS.conf' )
+
 if 'Telegram' in config:
 	telegram_token = config['Telegram']['TOKEN']
 	telegram_chat_id = config['Telegram']['CHATID']
@@ -86,12 +88,14 @@ def get_latest_post(path, target_profile, insta):
 	except Exception as e:
 		msg = f'Insta getting profile broke -> {e}'
 		logit(msg, 1)
+		post_down_bool = False
 
 	try:
 		posts = profile.get_posts()
 	except Exception as e:
 		msg = f'Insta getting post broke -> {e}'
 		logit(msg, 1)
+		post_down_bool = False
 
 	for p in posts:
 		# print(p.title)
@@ -310,13 +314,16 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 		media_to_upload = media_to_upload[:4]
 
 	chrome_options = Options()
-	chrome_options.add_argument("--headless")
+	# chrome_options.add_argument("--headless")
 	chrome_options.add_argument("--window-size=1920,1080")
 	driver = webdriver.Chrome(options=chrome_options)
 	driver.implicitly_wait(15)
 
-	pinterest_home = "https://www.pinterest.com/"
-	pin_builder = "https://www.pinterest.com/pin-builder/"
+	pinterest_home = 'https://www.pinterest.com/'
+	pinterest_profile = 'https://www.pinterest.co.uk/Lunatic_pin/'
+	home_wait = '//a[starts-with(@href, "https://analytics.pinterest.com")]'
+	profile_wait = '//h1[contains(text(), "Lunatic_pin")]'
+	pin_builder = 'https://www.pinterest.com/pin-builder/'
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
 	board_lp = f'//div[@title="{board_name}"]'
 	title = '//textarea[contains(@placeholder, "title")]'
@@ -331,11 +338,11 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
 	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
 
-	import IPython; IPython.embed(); exit()
-
-
 	driver.get(pinterest_home)
+	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, home_wait)))
 	driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
+	driver.get(pinterest_profile)
+	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
 	driver.get(pin_builder)
 
 	# wait and select the board to publish to
@@ -377,7 +384,14 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	logit(msg, 1)
 
 def main():
-	# os.system('clear')
+	
+	p = argparse.ArgumentParser(description='Hi LazyLisa!')
+	p.add_argument('-ntw', '--no_twitter', action='store_true', default=False, help='Do not post on Twitter.')
+	p.add_argument('-npi', '--no_pinterest', action='store_true', default=False, help='Do not post on Pinterest.')
+	p.add_argument('-ntu', '--no_tumblr', action='store_true', default=False, help='Do not post on Tumblr.')
+	p.add_argument('-nin', '--no_insta_check', action='store_true', default=False, help='Mark the downloaded post as the last one.')
+	args = p.parse_args()
+
 	post_fold = os.path.join(os.getcwd(),'posts')
 	if not os.path.isdir(post_fold):
 		os.mkdir(post_fold)
@@ -396,7 +410,8 @@ def main():
 	tweet = False
 	pin = False
 	tumblr = False
-	if 'Twitter' in config:
+
+	if 'Twitter' in config and not args.no_twitter:
 		try:
 			twitter_API = config['Twitter']['APIKEY']
 			twitter_API_SECRET = config['Twitter']['APIKEYSECRET']
@@ -408,7 +423,7 @@ def main():
 		except Exception as e:
 			logit(f'Twitter config is broken with error: {e}')
 
-	if 'Tumblr' in config:
+	if 'Tumblr' in config and not args.no_tumblr:
 		try:
 			tumblr_CUSTOMER_KEY = config['Tumblr']['CONSUMERKEY']
 			tumblr_CUSTOMER_SECRET = config['Tumblr']['CONSUMERSECRET']
@@ -420,7 +435,7 @@ def main():
 		except Exception as e:
 			logit(f'Tumblr config is broken with error: {e}')
 
-	if 'Pinterest' in config:
+	if 'Pinterest' in config and not args.no_pinterest:
 		try:
 			pinterest_SESSION = config['Pinterest']['SESSION']
 			pinterest_BOARD = config['Pinterest']['BOARD']
@@ -456,16 +471,16 @@ def main():
 			time.sleep(60*30)
 			continue
 
-		try:
-			new_post = get_latest_post(post_fold, target_profile, insta)
-		except Exception as e:
-			msg = f'Something broke down with Instagram -> {e}'
-			logit(msg, 1)
-			new_post = False
+		if args.no_insta_check:
+			new_post = True
+		else:
+			try:
+				new_post = get_latest_post(post_fold, target_profile, insta)
+			except Exception as e:
+				msg = f'Something broke down with Instagram -> {e}'
+				logit(msg, 1)
+				new_post = False
 		
-		# if True:
-		# 	logit('NOT - DEBUG - Got latest post')
-
 		if new_post:
 			logit('Got latest post, posting soon.', 1)
 			post_content = file_check(post_fold)
@@ -496,6 +511,7 @@ def main():
 			logit('Noting to do now')
 
 		time.sleep(60*30)
+		logit('Taking a nap')
 		# time.sleep(5)
 		status = check_status()
 		# print(f'Status -> {status}')
