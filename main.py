@@ -320,9 +320,9 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	driver.implicitly_wait(15)
 
 	pinterest_home = 'https://www.pinterest.com/'
-	pinterest_profile = 'https://www.pinterest.co.uk/Lunatic_pin/'
+	pinterest_profile = f'https://www.pinterest.co.uk/{board_name}/'
 	home_wait = '//a[starts-with(@href, "https://analytics.pinterest.com")]'
-	profile_wait = '//h1[contains(text(), "Lunatic_pin")]'
+	profile_wait = f'//h1[contains(text(), "{board_name}")]'
 	pin_builder = 'https://www.pinterest.com/pin-builder/'
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
 	board_lp = f'//div[@title="{board_name}"]'
