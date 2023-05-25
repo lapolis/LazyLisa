@@ -314,14 +314,14 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 		media_to_upload = media_to_upload[:4]
 
 	chrome_options = Options()
-	# chrome_options.add_argument("--headless")
+	chrome_options.add_argument("--headless")
 	chrome_options.add_argument("--window-size=1920,1080")
 	driver = webdriver.Chrome(options=chrome_options)
 	driver.implicitly_wait(15)
 
 	pinterest_home = 'https://www.pinterest.com/'
 	pinterest_profile = f'https://www.pinterest.co.uk/{board_name}/'
-	home_wait = '//a[starts-with(@href, "https://analytics.pinterest.com")]'
+	# home_wait = '//a[starts-with(@href, "https://analytics.pinterest.com")]'
 	profile_wait = f'//h1[contains(text(), "{board_name}")]'
 	pin_builder = 'https://www.pinterest.com/pin-builder/'
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
@@ -338,12 +338,19 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
 	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
 
-	driver.get(pinterest_home)
-	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, home_wait)))
-	driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
-	driver.get(pinterest_profile)
-	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
-	driver.get(pin_builder)
+	# import IPython; IPython.embed(); exit()
+
+	try:
+		driver.get(pinterest_home)
+		time.sleep(5)
+		driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
+		driver.get(pinterest_profile)
+		_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
+		driver.get(pin_builder)
+	except Exception as e:
+		msg = f'Pinterest failed login -> {e}'
+		logit(msg, 1)
+		return
 
 	# wait and select the board to publish to
 	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
