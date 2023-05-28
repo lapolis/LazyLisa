@@ -89,14 +89,14 @@ def get_latest_post(path, target_profile, insta, debug_post=False):
 	except Exception as e:
 		msg = f'Insta getting profile broke -> {e}'
 		logit(msg, 1)
-		post_down_bool = False
+		return False
 
 	try:
 		posts = profile.get_posts()
 	except Exception as e:
 		msg = f'Insta getting post broke -> {e}'
 		logit(msg, 1)
-		post_down_bool = False
+		return False
 
 	for p in posts:
 		# print(p.title)
