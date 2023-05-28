@@ -22,7 +22,8 @@ target_profile = <profile to scrape>
 ## CHATID = 
 ## 
 ## [Pinterest]
-## SESSION = <_pinterest_sess cookie straight outta ya browser>
+## PINEMAIL =  
+## PINPASSWD = 
 ## BOARD = <name (in palintext) of the board you want to post to>
 ## 
 ## [Tumblr]

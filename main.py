@@ -12,8 +12,9 @@ from instaloader import *
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options 
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 
 # import IPython; IPython.embed(); exit()
@@ -80,7 +81,7 @@ def insta_login(path, user, passwd):
 
 	return insta
 
-def get_latest_post(path, target_profile, insta):
+def get_latest_post(path, target_profile, insta, debug_post=False):
 	## requesting a password
 	# insta.interactive_login(user)
 	try:
@@ -106,6 +107,10 @@ def get_latest_post(path, target_profile, insta):
 		# print(p.video_url)
 		# print(p.shortcode)
 		if p.is_pinned:
+			continue
+
+		if debug_post and p.shortcode != debug_post:
+			logit(f'Skipping post {p.shortcode}')
 			continue
 
 		latedt_post_path = os.path.join(path, 'latest.post')
@@ -283,7 +288,7 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
 	logit(msg, 1)
 
-def pin_it(post_content, _pinterest_sess, board_name, target_profile):
+def pin_it(post_content, email, password, board_name, target_profile, headless):
 	# post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS
 	# 500 chars limit
 	# 5 files limit
@@ -314,15 +319,38 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 		media_to_upload = media_to_upload[:4]
 
 	chrome_options = Options()
-	chrome_options.add_argument("--headless")
+	if headless:
+		chrome_options.add_argument("--headless")
+
 	chrome_options.add_argument("--window-size=1920,1080")
+
+	chrome_options.add_argument("--disable-blink-features")
+	chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+	chrome_options.add_experimental_option("excludeSwitches", ["enable-automation","dom-automation","enable-experimental-ui-automation","auto-open-devtools-for-tabs"])
+	chrome_options.add_experimental_option('useAutomationExtension', False)
+
+	# install chrome bin
+	# driver = webdriver.Chrome(ChromeDriverManager().install(),options=chrome_options)
+
 	driver = webdriver.Chrome(options=chrome_options)
+
+	# change UA
+	driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36'})
+	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
 	driver.implicitly_wait(15)
 
 	pinterest_home = 'https://www.pinterest.com/'
 	pinterest_profile = f'https://www.pinterest.co.uk/{board_name}/'
 	# home_wait = '//a[starts-with(@href, "https://analytics.pinterest.com")]'
-	profile_wait = f'//h1[contains(text(), "{board_name}")]'
+	profile_wait = f'//*[contains(text(), "{board_name}")]'
+	profile_click = f'//a[@href="/{board_name}/"]'
+
+	# create_dropdown = '//div[contains(text(), "Create")]'
+	# create_pin_dropdown = '//div[contains(text(), "Create Pin")]'
+	# create_dropdown = "//div[text()='Create']"
+	# create_pin_dropdown = "//div[text()='Create Pin']"
+
 	pin_builder = 'https://www.pinterest.com/pin-builder/'
 	drop_down_menu = '//button[@data-test-id="board-dropdown-select-button"]'
 	board_lp = f'//div[@title="{board_name}"]'
@@ -338,22 +366,66 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
 	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
 
-	# import IPython; IPython.embed(); exit()
+	## Login!!
+	# driver.get(pinterest_home)
+	# time.sleep(5)
+	# driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
 
+	driver.get("https://pinterest.com/login")
 	try:
-		driver.get(pinterest_home)
-		time.sleep(5)
-		driver.add_cookie({"name": "_pinterest_sess", "value": _pinterest_sess, "sameSite": "None", "HttpOnly": "true", "Secure": "true"})
-		driver.get(pinterest_profile)
-		_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
-		driver.get(pin_builder)
+		WebDriverWait(driver, 15).until( EC.element_to_be_clickable((By.ID, "email")) )
+		driver.find_element(By.ID, "email").send_keys(email)
+		driver.find_element(By.ID, "password").send_keys(password)
+		logins = driver.find_elements(By.XPATH, "//*[contains(text(), 'Log in')]")
+		for login in logins:
+			login.click()
+		WebDriverWait(driver, 15).until( EC.invisibility_of_element((By.ID, "email")) )
+		msg = f'Successfully logged in with account {email}'
+		logit(msg)
+		time.sleep(6)
+
 	except Exception as e:
-		msg = f'Pinterest failed login -> {e}'
-		logit(msg, 1)
+		msg = f'Failed to login {e}'
+		login(msg, 1)
+		driver.close()
 		return
 
-	# wait and select the board to publish to
-	_ = WebDriverWait(driver, 20 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
+	try:
+		# driver.get(pinterest_profile)
+		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, profile_click)))
+		driver.find_element('xpath', profile_click).click()
+		time.sleep(6)
+		driver.find_element('xpath', profile_click).click()
+		time.sleep(4)
+	except Exception as e:
+		msg = f'Failed to click Profile -> {e}'
+		login(msg, 1)
+		driver.close()
+		return
+
+	try:
+		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
+		driver.get(pin_builder)
+	except Exception as e:
+		msg = f'Pinterest failed at login -> {e}\nLooking for XPATH -> {profile_wait}'
+		logit(msg, 1)
+		# with open('/tmp/debug.html','w+') as fw:
+		# 	fw.write(driver.page_source)
+		driver.close()
+		return
+
+	time.sleep(8)
+	try:
+		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
+		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, title)))
+	except Exception as e:
+		msg = f'Pinterest failed New Pin menu -> {e}'
+		logit(msg, 1)
+		# with open('/tmp/debug.html','w+') as fw:
+		# 	fw.write(driver.page_source)
+		driver.close()
+		return
+
 	driver.find_element('xpath', drop_down_menu).click()
 	driver.find_element('xpath', board_lp).click()
 	driver.find_element('xpath', title).send_keys(f'Got a new post waiting for you on my Insta!')
@@ -382,7 +454,7 @@ def pin_it(post_content, _pinterest_sess, board_name, target_profile):
 
 
 	# just give it a bit of extra time
-	_ = WebDriverWait(driver, 60 ).until(EC.presence_of_element_located((By.XPATH, post_done_message)))
+	_ = WebDriverWait(driver, 120 ).until(EC.presence_of_element_located((By.XPATH, post_done_message)))
 	pin_url = driver.find_element('xpath', link_to_pin).get_attribute('href')
 
 	driver.close()
@@ -397,6 +469,8 @@ def main():
 	p.add_argument('-npi', '--no_pinterest', action='store_true', default=False, help='Do not post on Pinterest.')
 	p.add_argument('-ntu', '--no_tumblr', action='store_true', default=False, help='Do not post on Tumblr.')
 	p.add_argument('-nin', '--no_insta_check', action='store_true', default=False, help='Mark the downloaded post as the last one.')
+	p.add_argument('-nh', '--no_headless', action='store_false', default=True, help='Show the Selenium browser.')
+	p.add_argument('-dp', '--debug_post', default=False, help='Download specific Instagram post using unique shortcode.')
 	args = p.parse_args()
 
 	post_fold = os.path.join(os.getcwd(),'posts')
@@ -425,8 +499,6 @@ def main():
 			twitter_TOKEN = config['Twitter']['ACCESSTOKEN']
 			twitter_TOKEN_SECRET = config['Twitter']['ACCESSSECRET']
 			tweet = True
-			## DEBUG
-			# tweet = False
 		except Exception as e:
 			logit(f'Twitter config is broken with error: {e}')
 
@@ -437,18 +509,15 @@ def main():
 			tumblr_OAUTH_TOKEN = config['Tumblr']['OAUTHTOKEN']
 			tumblr_OAUTH_SECRET = config['Tumblr']['OAUTHSECRET']
 			tumblr = True
-			## DEBUG
-			# tumblr = False
 		except Exception as e:
 			logit(f'Tumblr config is broken with error: {e}')
 
 	if 'Pinterest' in config and not args.no_pinterest:
 		try:
-			pinterest_SESSION = config['Pinterest']['SESSION']
+			pinterest_EMAIL = config['Pinterest']['PINEMAIL']
+			pinterest_PASSWD = config['Pinterest']['PINPASSWD']
 			pinterest_BOARD = config['Pinterest']['BOARD']
 			pin = True
-			## DEBUG
-			# pin = False
 		except Exception as e:
 			logit(f'Pinterest config is broken with error: {e}')
 
@@ -482,7 +551,7 @@ def main():
 			new_post = True
 		else:
 			try:
-				new_post = get_latest_post(post_fold, target_profile, insta)
+				new_post = get_latest_post(post_fold, target_profile, insta, args.debug_post)
 			except Exception as e:
 				msg = f'Something broke down with Instagram -> {e}'
 				logit(msg, 1)
@@ -502,7 +571,7 @@ def main():
 			if pin:
 				logit('Posting on Pinterest')
 				try:
-					pin_it(post_content, pinterest_SESSION, pinterest_BOARD, target_profile)
+					pin_it(post_content, pinterest_EMAIL, pinterest_PASSWD, pinterest_BOARD, target_profile, args.no_headless)
 				except Exception as e:
 					msg = f'Not able to Pin it -> {e}'
 					logit(msg, 1)
