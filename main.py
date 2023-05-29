@@ -7,8 +7,11 @@ import argparse
 import filetype
 import requests
 import pytumblr
+import threading
 import configparser
 from instaloader import *
+
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -28,32 +31,39 @@ config.read( os.getcwd() + '/API_KEYS.conf' )
 if 'Telegram' in config:
 	telegram_token = config['Telegram']['TOKEN']
 	telegram_chat_id = config['Telegram']['CHATID']
+	telegram_user = config['Telegram']['USER']
 else:
 	telegram_token = ''
 	telegram_chat_id = ''
+	telegram_user = ''
+
+status = 'start'
 
 def send_msg(msg):
 	if telegram_token and telegram_chat_id:
 		method  = 'sendMessage'
 		requests.post( url=f'https://api.telegram.org/bot{telegram_token}/{method}', data={'chat_id': telegram_chat_id, 'text': msg} ).json()
 
-def check_status():
-	msg = 'start'
-	if telegram_token and telegram_chat_id:
-		r = requests.get( url=f'https://api.telegram.org/bot{telegram_token}/getUpdates?offset=-1' ).json()
-
-		# import IPython; IPython.embed(); exit()
-
+def check_telegram_msg(path):
+	global status
+	while True:
 		try:
-			msg = r['result'][0]['message']['text']
-			chat = r['result'][0]['message']['chat']['id']
+			r = requests.get( url=f'https://api.telegram.org/bot{telegram_token}/getUpdates?offset=100' ).json()
+			updates_arr = r['result']
+			for u in updates_arr[::-1]:
+				msg = u['message']['text']
+				chat = u['message']['chat']['id']
+				username = u['message']['chat']['username']
+				date = u['message']['date']
+				if username == telegram_user and str(chat) == telegram_chat_id:
+					if msg != status:
+						status = msg
+					break
 		except Exception as e:
-			chat = 0000
+			log = f'Telegram check broke -> {e}'
+			logit(log,1)
 
-	if chat == telegram_chat_id:
-		return msg
-	else:
-		return 'start'
+		time.sleep(1.5)
 
 def logit(msg, send=0):
 	print(f'{time.strftime("%Y/%m/%d-%H:%M:%S")} - {msg}')
@@ -122,7 +132,7 @@ def get_latest_post(path, target_profile, insta, debug_post=False):
 				logit('Deleting and downloading')
 				for file_name in os.listdir(path):
 					file_path = os.path.join(path, file_name)
-					if 'latest.post' not in file_path:
+					if 'latest.post' not in file_path or '.telegram_log' not in file_path:
 						os.remove(file_path)
 				f.seek(0, 0)
 				f.write(p.shortcode)
@@ -410,7 +420,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 		msg = f'Pinterest failed at login -> {e}\nLooking for XPATH -> {profile_wait}'
 		logit(msg, 1)
 		# with open('/tmp/debug.html','w+') as fw:
-		# 	fw.write(driver.page_source)
+		#   fw.write(driver.page_source)
 		driver.close()
 		return
 
@@ -422,7 +432,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 		msg = f'Pinterest failed New Pin menu -> {e}'
 		logit(msg, 1)
 		# with open('/tmp/debug.html','w+') as fw:
-		# 	fw.write(driver.page_source)
+		#   fw.write(driver.page_source)
 		driver.close()
 		return
 
@@ -463,7 +473,6 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 	logit(msg, 1)
 
 def main():
-	
 	p = argparse.ArgumentParser(description='Hi LazyLisa!')
 	p.add_argument('-ntw', '--no_twitter', action='store_true', default=False, help='Do not post on Twitter.')
 	p.add_argument('-npi', '--no_pinterest', action='store_true', default=False, help='Do not post on Pinterest.')
@@ -471,7 +480,10 @@ def main():
 	p.add_argument('-nin', '--no_insta_check', action='store_true', default=False, help='Mark the downloaded post as the last one.')
 	p.add_argument('-nh', '--no_headless', action='store_false', default=True, help='Show the Selenium browser.')
 	p.add_argument('-dp', '--debug_post', default=False, help='Download specific Instagram post using unique shortcode.')
+	p.add_argument('-s', '--sleep', default=None, help='Sleep time in seconds between checks (default 30 min).')
 	args = p.parse_args()
+
+	time_sleep = int(args.sleep) if args.sleep else 60*30
 
 	post_fold = os.path.join(os.getcwd(),'posts')
 	if not os.path.isdir(post_fold):
@@ -525,26 +537,29 @@ def main():
 	if not insta:
 		exit(1)
 
+	# Starting Telegram checker
+	if 	telegram_token and telegram_chat_id and telegram_user:
+		thread = threading.Thread(target=check_telegram_msg, args=(post_fold,))
+		thread.daemon = True
+		thread.start()
+
 	msg = f'LazyLisa started!\nTumblr: {tumblr}\nTwitter: {tweet}\nPinterest: {pin}'
 	send_msg(msg)
-
-	## DEBUG
-	status = 'start'
 
 	while True:
 
 		if status == 'stop':
-			msg = f'EXITING LazyLisa'
+			msg = 'EXITING LazyLisa'
 			exit()
 		elif status == 'pause':
-			msg = f'LazyLisa paused!'
+			msg = 'LazyLisa paused!'
 			logit(msg, 1)
-			time.sleep(60*30)
+			time.sleep(time_sleep)
 			continue
 		elif status != 'start':
 			msg = f'LazyLisa weird status -> {status}'
 			logit(msg, 1)
-			time.sleep(60*30)
+			time.sleep(time_sleep)
 			continue
 
 		if args.no_insta_check:
@@ -586,11 +601,8 @@ def main():
 		else:
 			logit('Noting to do now')
 
-		time.sleep(60*30)
+		time.sleep(time_sleep)
 		logit('Taking a nap')
-		# time.sleep(5)
-		status = check_status()
-		# print(f'Status -> {status}')
 
 if __name__ == '__main__' :
 	main()

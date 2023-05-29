@@ -20,6 +20,7 @@ target_profile = <profile to scrape>
 ## [Telegram]
 ## TOKEN = 
 ## CHATID = 
+## USER = 
 ## 
 ## [Pinterest]
 ## PINEMAIL =  
