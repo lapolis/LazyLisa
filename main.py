@@ -9,10 +9,8 @@ import requests
 import pytumblr
 import threading
 import configparser
+
 from instaloader import *
-
-from datetime import datetime
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -132,7 +130,7 @@ def get_latest_post(path, target_profile, insta, debug_post=False):
 				logit('Deleting and downloading')
 				for file_name in os.listdir(path):
 					file_path = os.path.join(path, file_name)
-					if 'latest.post' not in file_path or '.telegram_log' not in file_path:
+					if 'latest.post' not in file_path:
 						os.remove(file_path)
 				f.seek(0, 0)
 				f.write(p.shortcode)
@@ -497,7 +495,7 @@ def main():
 			INSTA_PASS = ''
 		target_profile = config['Instagram']['target_profile']
 	else:
-		logit('XX Missing Insta creds')
+		logit('EXITING LazyLisa - (missing insta creds)')
 		exit(1)
 
 	tweet = False
@@ -535,6 +533,7 @@ def main():
 
 	insta = insta_login(post_fold, INSTA_USER, INSTA_PASS)
 	if not insta:
+		logit('EXITING LazyLisa - (not able to login)')
 		exit(1)
 
 	# Starting Telegram checker
@@ -549,7 +548,8 @@ def main():
 	while True:
 
 		if status == 'stop':
-			msg = 'EXITING LazyLisa'
+			msg = 'EXITING LazyLisa - (user requested)'
+			logit(msg, 1)
 			exit()
 		elif status == 'pause':
 			msg = 'LazyLisa paused!'
