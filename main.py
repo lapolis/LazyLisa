@@ -44,22 +44,32 @@ def send_msg(msg):
 
 def check_telegram_msg(path):
 	global status
+	c = 0
+	# n = time.time()
+	# a = time.time()
+	# diff = a - n
+
 	while True:
 		try:
 			r = requests.get( url=f'https://api.telegram.org/bot{telegram_token}/getUpdates?offset=100' ).json()
 			updates_arr = r['result']
-			for u in updates_arr[::-1]:
-				msg = u['message']['text']
-				chat = u['message']['chat']['id']
-				username = u['message']['chat']['username']
-				date = u['message']['date']
-				if username == telegram_user and str(chat) == telegram_chat_id:
-					if msg != status:
-						status = msg
-					break
+			if len(updates_arr) > 0 :
+				for u in updates_arr[::-1]:
+					msg = u['message']['text']
+					chat = u['message']['chat']['id']
+					username = u['message']['chat']['username']
+					date = u['message']['date']
+					if username == telegram_user and str(chat) == telegram_chat_id:
+						if msg != status:
+							status = msg
+						break
 		except Exception as e:
 			log = f'Telegram check broke -> {e}'
-			logit(log,1)
+			if c > 15:
+				logit(log,1)
+				c = 0
+			else:
+				logit(log)
 
 		time.sleep(1.5)
 
