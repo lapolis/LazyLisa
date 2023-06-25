@@ -482,7 +482,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 
 def wait_start(runTime):
     while time.strftime('%H:%M') != runTime:
-        sleep(1)
+        time.sleep(1)
 
 def main():
 	p = argparse.ArgumentParser(description='Hi LazyLisa!')
