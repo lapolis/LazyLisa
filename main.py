@@ -250,7 +250,7 @@ def tweet_it(post_content, api_key, api_secret, access_token, access_token_secre
 
 	txt_file_path = [k for k, v in post_content.items() if v == 'plain/text'][0]
 	## 280 characters max!! for Insta!
-	post_arr = split_text(txt_file_path, 275)
+	post_arr = split_text(txt_file_path, 260)
 
 	# Tweet a video
 	media_arr = []
@@ -480,6 +480,10 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 	msg = f'Pinterest pin done -> {pin_url}'
 	logit(msg, 1)
 
+def wait_start(runTime):
+    while time.strftime('%H:%M') != runTime:
+        sleep(1)
+
 def main():
 	p = argparse.ArgumentParser(description='Hi LazyLisa!')
 	p.add_argument('-ntw', '--no_twitter', action='store_true', default=False, help='Do not post on Twitter.')
@@ -491,7 +495,7 @@ def main():
 	p.add_argument('-s', '--sleep', default=None, help='Sleep time in seconds between checks (default 30 min).')
 	args = p.parse_args()
 
-	time_sleep = int(args.sleep) if args.sleep else 60*30
+	# time_sleep = int(args.sleep) if args.sleep else 60*30
 
 	post_fold = os.path.join(os.getcwd(),'posts')
 	if not os.path.isdir(post_fold):
@@ -564,12 +568,12 @@ def main():
 		elif status == 'pause':
 			msg = 'LazyLisa paused!'
 			logit(msg, 1)
-			time.sleep(time_sleep)
+			# time.sleep(time_sleep)
 			continue
 		elif status != 'start':
 			msg = f'LazyLisa weird status -> {status}'
 			logit(msg, 1)
-			time.sleep(time_sleep)
+			# time.sleep(time_sleep)
 			continue
 
 		if args.no_insta_check:
@@ -611,8 +615,10 @@ def main():
 		else:
 			logit('Noting to do now')
 
-		time.sleep(time_sleep)
-		logit('Taking a nap')
+		# time.sleep(time_sleep)
+		time_to_wait = '19:00'
+		logit(f'Waiting {time_to_wait}')
+		wait_start(time_to_wait)
 
 if __name__ == '__main__' :
 	main()
