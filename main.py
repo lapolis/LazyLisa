@@ -125,6 +125,7 @@ def get_latest_post(path, target_profile, insta, debug_post=False):
 		# print(p.video_url)
 		# print(p.shortcode)
 		if p.is_pinned:
+			logit(f'Skipping pinned {p.shortcode}')
 			continue
 
 		if debug_post and p.shortcode != debug_post:
@@ -134,10 +135,10 @@ def get_latest_post(path, target_profile, insta, debug_post=False):
 		latedt_post_path = os.path.join(path, 'latest.post')
 		perm = 'r+' if os.path.isfile(latedt_post_path) else 'w+'
 		with open(latedt_post_path, perm) as f:
-			if p.shortcode == f.read().strip():
+			if p.shortcode == f.read().strip() and not debug_post:
 				return False
 			else:
-				logit('Deleting and downloading')
+				logit(f'Deleting and downloading {p.shortcode}')
 				for file_name in os.listdir(path):
 					file_path = os.path.join(path, file_name)
 					if 'latest.post' not in file_path:
@@ -306,7 +307,7 @@ def tumblr_post_it(post_content, consumer_key, consumer_secret, oauth_token, oau
 	msg = f'Tumblr post done -> https://www.tumblr.com/{account_name}/{post_id}'
 	logit(msg, 1)
 
-def pin_it(post_content, email, password, board_name, target_profile, headless):
+def pin_it(post_content, email, password, board_name, target_profile, headless, debug_pinterest=False):
 	# post_content, pin_APP_ID, pin_APP_SECRET, pin_BOARD_ID, pin_APP_TOKEN, pin_REDIRECT, pin_INTERESTS
 	# 500 chars limit
 	# 5 files limit
@@ -323,15 +324,22 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 		code = fr.read().strip()
 	insta_post_url = f'https://www.instagram.com/p/{code}'
 
-	# They can read the remaining test in insta
-	post_ending = f'\n\nCheck the full post on Insta!'
-	caption = split_text(caption_file_path, 499 - len(post_ending))[0]
-	caption = caption.replace(' (1/2)', post_ending)
 
-	if 'video/mp4' in post_content.values():
-		media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
+	# if 'video/mp4' in post_content.values():
+	# 	media_to_upload = [k for k, v in post_content.items() if v == 'video/mp4']
+	# else:
+	# 	media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+	
+	vids = [k for k, v in post_content.items() if v == 'video/mp4']
+	media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+	
+	# They can read the remaining test in insta
+	if vids:
+		post_header = f'Full video on Insta!\n\n'
 	else:
-		media_to_upload = [k for k, v in post_content.items() if v == 'image/jpeg']
+		post_header = f'Full post on Insta!\n\n'
+	caption = split_text(caption_file_path, 480 - len(post_header))[0]
+	caption = f"{post_header}{caption.replace(' (1/2)', '')}"
 
 	if len(media_to_upload) > 4:
 		media_to_upload = media_to_upload[:4]
@@ -356,7 +364,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 	driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36'})
 	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-	driver.implicitly_wait(15)
+	driver.implicitly_wait(30)
 
 	pinterest_home = 'https://www.pinterest.com/'
 	pinterest_profile = f'https://www.pinterest.co.uk/{board_name}/'
@@ -391,84 +399,173 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 
 	driver.get("https://pinterest.com/login")
 	try:
-		WebDriverWait(driver, 15).until( EC.element_to_be_clickable((By.ID, "email")) )
+		WebDriverWait(driver, 35).until( EC.element_to_be_clickable((By.ID, "email")) )
 		driver.find_element(By.ID, "email").send_keys(email)
 		driver.find_element(By.ID, "password").send_keys(password)
 		logins = driver.find_elements(By.XPATH, "//*[contains(text(), 'Log in')]")
 		for login in logins:
 			login.click()
-		WebDriverWait(driver, 15).until( EC.invisibility_of_element((By.ID, "email")) )
+		WebDriverWait(driver, 35).until( EC.invisibility_of_element((By.ID, "email")) )
 		msg = f'Successfully logged in with account {email}'
 		logit(msg)
 		time.sleep(6)
-
+		driver.get("https://pinterest.com/")
 	except Exception as e:
 		msg = f'Failed to login {e}'
-		login(msg, 1)
+		logit(msg, 1)
 		driver.close()
 		return
 
 	try:
-		# driver.get(pinterest_profile)
-		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, profile_click)))
+		driver.get(pinterest_profile)
+		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, profile_click)))
 		driver.find_element('xpath', profile_click).click()
 		time.sleep(6)
 		driver.find_element('xpath', profile_click).click()
 		time.sleep(4)
 	except Exception as e:
 		msg = f'Failed to click Profile -> {e}'
-		login(msg, 1)
+		logit(msg, 1)
 		driver.close()
 		return
 
 	try:
-		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
+		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
 		driver.get(pin_builder)
 	except Exception as e:
 		msg = f'Pinterest failed at login -> {e}\nLooking for XPATH -> {profile_wait}'
 		logit(msg, 1)
-		# with open('/tmp/debug.html','w+') as fw:
-		#   fw.write(driver.page_source)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
 		driver.close()
 		return
 
 	time.sleep(8)
 	try:
-		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
-		_ = WebDriverWait(driver, 15 ).until(EC.presence_of_element_located((By.XPATH, title)))
+		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, drop_down_menu)))
+		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, title)))
 	except Exception as e:
 		msg = f'Pinterest failed New Pin menu -> {e}'
 		logit(msg, 1)
-		# with open('/tmp/debug.html','w+') as fw:
-		#   fw.write(driver.page_source)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
 		driver.close()
 		return
 
-	driver.find_element('xpath', drop_down_menu).click()
-	driver.find_element('xpath', board_lp).click()
-	driver.find_element('xpath', title).send_keys(f'Got a new post waiting for you on my Insta!')
+	try:
+		driver.find_element('xpath', drop_down_menu).click()
+	except Exception as e:
+		msg = f'Pinterest failed finding DropDown menu -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
 
-	description_elem = driver.find_element('xpath', description)
-	# To keep emoji and stuff
-	driver.execute_script(
-	f'''
-	const text = `{caption}`;
-	const dataTransfer = new DataTransfer();
-	dataTransfer.setData('text', text);
-	const event = new ClipboardEvent('paste', {{
-	clipboardData: dataTransfer,
-	bubbles: true
-	}});
-	arguments[0].dispatchEvent(event)
-	''',
-	description_elem)
+	try:
+		driver.find_element('xpath', board_lp).click()
+	except Exception as e:
+		msg = f'Pinterest failed fidning board -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
 
-	driver.find_element('xpath', destination_link).send_keys(insta_post_url)
-	driver.find_element('xpath', upload_media).send_keys(media_to_upload[0])
-	driver.find_element('xpath', alt_text).click()
-	driver.find_element('xpath', alt_text_write).send_keys(f'Latest post from my Instagram. Go check it out on my {target_profile} page!')
-	# driver.find_element('xpath', tags_path).send_keys(tags)
-	driver.find_element('xpath', publish).click()
+	try:
+		driver.find_element('xpath', title).send_keys(f'Insta (@lisa.lunaticpin) for full post <3')
+	except Exception as e:
+		msg = f'Pinterest failed adding the title -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		description_elem = driver.find_element('xpath', description)
+		# To keep emoji and stuff
+		driver.execute_script(
+		f'''
+		const text = `{caption}`;
+		const dataTransfer = new DataTransfer();
+		dataTransfer.setData('text', text);
+		const event = new ClipboardEvent('paste', {{
+		clipboardData: dataTransfer,
+		bubbles: true
+		}});
+		arguments[0].dispatchEvent(event)
+		''',
+		description_elem)
+	except Exception as e:
+		msg = f'Pinterest failed JS fuckery -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		driver.find_element('xpath', destination_link).send_keys(insta_post_url)
+	except Exception as e:
+		msg = f'Pinterest failed to set destination -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		driver.find_element('xpath', upload_media).send_keys(media_to_upload[0])
+	except Exception as e:
+		msg = f'Pinterest failed to upload media -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		driver.find_element('xpath', alt_text).click()
+	except Exception as e:
+		msg = f'Pinterest failed to click alt_text -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		driver.find_element('xpath', alt_text_write).send_keys(f'Latest post from my Instagram. Go check it out on my {target_profile} page!')
+	except Exception as e:
+		msg = f'Pinterest failed to write alt_text -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return
+
+	try:
+		# driver.find_element('xpath', tags_path).send_keys(tags)
+		driver.find_element('xpath', publish).click()
+	except Exception as e:
+		msg = f'Pinterest failed to click publish -> {e}'
+		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
+		driver.close()
+		return		
 
 
 	# just give it a bit of extra time
@@ -481,21 +578,24 @@ def pin_it(post_content, email, password, board_name, target_profile, headless):
 	logit(msg, 1)
 
 def wait_start(runTime):
-    while time.strftime('%H:%M') != runTime:
-        time.sleep(1)
+	while time.strftime('%H:%M') != runTime:
+		time.sleep(1)
 
 def main():
 	p = argparse.ArgumentParser(description='Hi LazyLisa!')
 	p.add_argument('-ntw', '--no_twitter', action='store_true', default=False, help='Do not post on Twitter.')
 	p.add_argument('-npi', '--no_pinterest', action='store_true', default=False, help='Do not post on Pinterest.')
+	p.add_argument('-dpi', '--debug_pinterest', action='store_true', default=False, help='Write HTML page content in /tmp on failure.')
 	p.add_argument('-ntu', '--no_tumblr', action='store_true', default=False, help='Do not post on Tumblr.')
 	p.add_argument('-nin', '--no_insta_check', action='store_true', default=False, help='Mark the downloaded post as the last one.')
 	p.add_argument('-nh', '--no_headless', action='store_false', default=True, help='Show the Selenium browser.')
 	p.add_argument('-dp', '--debug_post', default=False, help='Download specific Instagram post using unique shortcode.')
 	p.add_argument('-s', '--sleep', default=None, help='Sleep time in seconds between checks (default 30 min).')
+	p.add_argument('-or', '--one_round', default=False, action='store_true', help='Do only one loop and exit.')
 	args = p.parse_args()
 
-	# time_sleep = int(args.sleep) if args.sleep else 60*30
+	time_sleep = int(args.sleep) if args.sleep else 0
+	one_round = args.one_round
 
 	post_fold = os.path.join(os.getcwd(),'posts')
 	if not os.path.isdir(post_fold):
@@ -599,11 +699,15 @@ def main():
 					logit(msg, 1)
 			if pin:
 				logit('Posting on Pinterest')
-				try:
-					pin_it(post_content, pinterest_EMAIL, pinterest_PASSWD, pinterest_BOARD, target_profile, args.no_headless)
-				except Exception as e:
-					msg = f'Not able to Pin it -> {e}'
-					logit(msg, 1)
+				attempt = 0
+				while attempt < 6:
+					try:
+						pin_it(post_content, pinterest_EMAIL, pinterest_PASSWD, pinterest_BOARD, target_profile, args.no_headless, args.debug_pinterest)
+						attempt = 666
+					except Exception as e:
+						msg = f'Not able to Pin it - (attempt {attempt}) -> {e}'
+						logit(msg, 1)
+						attempt += 1
 			if tumblr:
 				logit('Posting on Tumblr')
 				try:
@@ -613,12 +717,16 @@ def main():
 					logit(msg, 1)
 
 		else:
-			logit('Noting to do now')
+			logit('Nothing to do now')
 
-		# time.sleep(time_sleep)
-		time_to_wait = '19:00'
-		logit(f'Waiting {time_to_wait}')
-		wait_start(time_to_wait)
+		if one_round:
+			exit()
+		elif time_sleep:
+			time.sleep(time_sleep)
+		else:
+			time_to_wait = '19:00'
+			logit(f'Waiting {time_to_wait}')
+			wait_start(time_to_wait)
 
 if __name__ == '__main__' :
 	main()

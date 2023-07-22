@@ -13,5 +13,6 @@ pytumblr
 py3-pinterest
 urllib3
 selenium
+chromedriver-py
 # chromedriver-autoinstaller
 # sudo apt-get install chromium-chromedriver
