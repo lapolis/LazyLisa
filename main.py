@@ -392,6 +392,14 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 	link_to_pin = '//div[@data-test-id="seeItNow"]/a'
 	link_to_pin_bckw = '//div[contains(text(), "See your Pin")]/../../../..//a'
 
+	# might need to enter the popup first
+	# popup = '//div[@name="trap-focus"]'
+	# case insensitive regex (i)
+	# popup_exit_click = '//button[matches(@aria-label, "close", "i")][@type="button"]'
+	# this might work too, need to test
+	# popup_exit_click = '//button[contains(lower-case(@aria-label), "close")]'
+	popup_exit_click = '//button[contains(@aria-label, "lose") and @type="button"]'
+
 	## Login!!
 	# driver.get(pinterest_home)
 	# time.sleep(5)
@@ -408,8 +416,8 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		WebDriverWait(driver, 35).until( EC.invisibility_of_element((By.ID, "email")) )
 		msg = f'Successfully logged in with account {email}'
 		logit(msg)
-		time.sleep(6)
 		driver.get("https://pinterest.com/")
+		time.sleep(6)
 	except Exception as e:
 		msg = f'Failed to login {e}'
 		logit(msg, 1)
@@ -417,7 +425,13 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		return False
 
 	try:
-		driver.get(pinterest_profile)
+		driver.find_element('xpath', popup_exit_click).click()
+	except Exception as e:
+		msg = f'No pop-up to click -> {e}'
+		logit(msg)
+
+	try:
+		# driver.get(pinterest_profile)
 		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, profile_click)))
 		driver.find_element('xpath', profile_click).click()
 		time.sleep(6)
@@ -427,7 +441,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Failed to click Profile -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -439,7 +453,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed at login -> {e}\nLooking for XPATH -> {profile_wait}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -452,7 +466,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed New Pin menu -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -463,7 +477,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed finding DropDown menu -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -474,7 +488,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed fidning board -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -485,7 +499,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed adding the title -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -509,7 +523,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed JS fuckery -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -520,7 +534,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed to set destination -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -531,7 +545,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed to upload media -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -542,7 +556,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed to click alt_text -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -553,7 +567,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed to write alt_text -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False
@@ -565,7 +579,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Pinterest failed to click publish -> {e}'
 		logit(msg, 1)
 		if debug_pinterest:
-			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y-%m-%d_%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
 		return False		
