@@ -414,7 +414,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 		msg = f'Failed to login {e}'
 		logit(msg, 1)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.get(pinterest_profile)
@@ -426,8 +426,11 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 	except Exception as e:
 		msg = f'Failed to click Profile -> {e}'
 		logit(msg, 1)
+		if debug_pinterest:
+			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
+				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		_ = WebDriverWait(driver, 35 ).until(EC.presence_of_element_located((By.XPATH, profile_wait)))
@@ -439,7 +442,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	time.sleep(8)
 	try:
@@ -452,7 +455,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', drop_down_menu).click()
@@ -463,7 +466,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', board_lp).click()
@@ -474,7 +477,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', title).send_keys(f'Insta (@lisa.lunaticpin) for full post <3')
@@ -485,7 +488,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		description_elem = driver.find_element('xpath', description)
@@ -509,7 +512,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', destination_link).send_keys(insta_post_url)
@@ -520,7 +523,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', upload_media).send_keys(media_to_upload[0])
@@ -531,7 +534,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', alt_text).click()
@@ -542,7 +545,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		driver.find_element('xpath', alt_text_write).send_keys(f'Latest post from my Instagram. Go check it out on my {target_profile} page!')
@@ -553,7 +556,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return
+		return False
 
 	try:
 		# driver.find_element('xpath', tags_path).send_keys(tags)
@@ -565,7 +568,7 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 			with open(f'/tmp/debug_pin_{time.strftime("%Y/%m/%d-%H:%M:%S")}.html','w+') as fw:
 				fw.write(driver.page_source)
 		driver.close()
-		return		
+		return False		
 
 
 	# just give it a bit of extra time
@@ -576,6 +579,8 @@ def pin_it(post_content, email, password, board_name, target_profile, headless, 
 
 	msg = f'Pinterest pin done -> {pin_url}'
 	logit(msg, 1)
+
+	return True
 
 def wait_start(runTime):
 	while time.strftime('%H:%M') != runTime:
@@ -702,8 +707,8 @@ def main():
 				attempt = 0
 				while attempt < 6:
 					try:
-						pin_it(post_content, pinterest_EMAIL, pinterest_PASSWD, pinterest_BOARD, target_profile, args.no_headless, args.debug_pinterest)
-						attempt = 666
+						done = pin_it(post_content, pinterest_EMAIL, pinterest_PASSWD, pinterest_BOARD, target_profile, args.no_headless, args.debug_pinterest)
+						attempt = 666 if done else attempt+1
 					except Exception as e:
 						msg = f'Not able to Pin it - (attempt {attempt}) -> {e}'
 						logit(msg, 1)
